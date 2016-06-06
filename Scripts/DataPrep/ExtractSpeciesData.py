@@ -15,7 +15,8 @@ import numpy as np
 
 #Species to process
 spp = "Etheostoma_olmstedi"
-#spp = "Acantharchus_pomotis"
+spp = "Acantharchus_pomotis"
+spp = "Nocomis_leptocephalus"
 
 #Workspaces
 eoCSV = r'C:\workspace\GeoWET\Data\ToolData\SpeciesOccurrences.csv'
@@ -83,16 +84,16 @@ def assignPresence(df,spp,FeatureIDs):
 def mergePresAbs(eoCSV,speciesName,dataDF):
     '''Adds a column of species presence/absence to the dataFN'''
     #Create a data frame from the species data
-    useCols = ["FEATUREID",spp]
+    useCols = ["FEATUREID",speciesName]
     eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
     
     #Join the presence absence data to the catchment data frame
     idxDF = dataDF.set_index("FEATUREID")
-    #outDF = pd.merge(eoDF,idxDF,left_on="FEATUREID",right_index=True)
-    outDF = pd.merge(df,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
+    outDF = pd.merge(eoDF,idxDF,left_on="FEATUREID",right_index=True)
+    #outDF = pd.merge(df,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
 
     #Change NaNs to 0
-    outDF[spp].fillna(0,inplace=True)
+    outDF[speciesName] = outDF[speciesName].fillna(0)
     return outDF
 
 #Get the HUC8s
