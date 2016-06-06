@@ -14,7 +14,8 @@ import pandas as pd
 import numpy as np
 
 #Species to process
-spp = "Acantharchus_pomotis"
+spp = "Etheostoma_olmstedi"
+#spp = "Acantharchus_pomotis"
 
 #Workspaces
 eoCSV = r'C:\workspace\GeoWET\Data\ToolData\SpeciesOccurrences.csv'
@@ -44,15 +45,51 @@ def spatialSelect(dataFN,huc8List):
     selectDF = dataDF[dataDF["HUC_12"].str[:8].isin(huc8s)]
     return selectDF
 
+def getFeatureIDs(eoCSV,speciesNames):
+    '''Returns a list of the FEATUREIDS in which a species occurs'''
+    #Create a data frame from the species data
+    useCols = ["FEATUREID",spp]
+    eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
+    #Pull just the records where the species occurs
+    sppDF = eoDF[eoDF[spp] == 1]
+    #Get a list of the huc8s in which the spp is found
+    FeatureIDs = sppDF['FEATUREID']
+    #Return the list
+    return FeatureIDs.tolist()
+
+def makeSpeciesDF(eoCSV,dataDF,speciesNames):
+    '''Returns a dataframe of feature IDs where the species is present'''
+    #Create a data frame from the species data
+    useCols = ["FEATUREID",spp]
+    eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
+    #Pull just the records where the species occurs
+    sppDF = pd.merge(dataDF,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
+    #sppDF = eoDF[eoDF[spp] == 1]
+    
+    #Change NaNs to 0
+    sppDF[spp].fillna(0,inplace=True)
+    
+    return sppDF#[spp]
+    #THen concat this with the others
+
+def assignPresence(df,spp,FeatureIDs):
+    '''Adds a column and assigns 1 to presence values'''
+    #Insert column, assign zero as default
+    df.insert(0,spp,0)
+    #Select records with matching FeatureIDs
+    for FeatureID in FeatureIDs:
+        df.ix[df.FEATUREID == FeatureID,spp] = 1
+
 def mergePresAbs(eoCSV,speciesName,dataDF):
     '''Adds a column of species presence/absence to the dataFN'''
     #Create a data frame from the species data
     useCols = ["FEATUREID",spp]
     eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
     
-    #Join the species data to the catchment data frame
+    #Join the presence absence data to the catchment data frame
     idxDF = dataDF.set_index("FEATUREID")
-    outDF = pd.merge(eoDF,idxDF,left_on="FEATUREID",right_index=True)
+    #outDF = pd.merge(eoDF,idxDF,left_on="FEATUREID",right_index=True)
+    outDF = pd.merge(df,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
 
     #Change NaNs to 0
     outDF[spp].fillna(0,inplace=True)
@@ -67,28 +104,43 @@ allFiles = os.listdir(dataFldr)
 dataFrames = []
 firstFile = True
 for f in allFiles:
+    #Only process the CSV files
     if f[-4:] == ".csv":
+        #Get the full file name
         fullFN = os.path.join(dataFldr,f)
         print "Extracting records from {}".format(f)
+        #Retrieve only the HUC8 records as a data frame
         dataDF = spatialSelect(fullFN,huc8s)
         print "...{} catchment records extracted".format(len(dataDF))
         #If not the first file, then remove the 1st 5 columns (duplicates)
         if  firstFile:
-            #dataDF = dataDF[dataDF.columns[1:]]
+            #Prepend species presence absence to table
             firstFile = False
         else:
             dataDF = dataDF[dataDF.columns[5:]]
+
+        #Convert to smaller datatypes to save memory
+        for c in dataDF.columns:
+            if dataDF[c].dtype.type == np.float64:
+                dataDF[c]= dataDF[c].astype(np.float32)
+        #Append to the list of data frames
         dataFrames.append(dataDF)
+
+#Create the species presence/absence data frame
+print "Creating presence absence data frame"
+#sppDF = makeSpeciesDF(eoCSV,dataFrames[1],spp)
+#dataFrames.insert(0,sppDF)
 
 #Merge dfs into one
 print "Merging data frames"
 dataDF = pd.concat(dataFrames,axis=1)
 
-#Prepend with spp presense/absence
-print "Adding species presence/absence column"
+#Add species presence absence data
 outDF = mergePresAbs(eoCSV,spp,dataDF)
 
-print "Resulting table has {0} columns and {1} records".format(dataDF.shape[1],dataDF.shape[0])
+#Remove single dfs to free memory
+del dataFrames
+print "Resulting table has {0} columns and {1} records".format(outDF.shape[1],outDF.shape[0])
 
 #Write to a file for the spp
 print "Saving to {}".format(outFN)
