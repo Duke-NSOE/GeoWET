@@ -46,41 +46,6 @@ def spatialSelect(dataFN,huc8List):
     selectDF = dataDF[dataDF["HUC_12"].str[:8].isin(huc8s)]
     return selectDF
 
-def getFeatureIDs(eoCSV,speciesNames):
-    '''Returns a list of the FEATUREIDS in which a species occurs'''
-    #Create a data frame from the species data
-    useCols = ["FEATUREID",spp]
-    eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
-    #Pull just the records where the species occurs
-    sppDF = eoDF[eoDF[spp] == 1]
-    #Get a list of the huc8s in which the spp is found
-    FeatureIDs = sppDF['FEATUREID']
-    #Return the list
-    return FeatureIDs.tolist()
-
-def makeSpeciesDF(eoCSV,dataDF,speciesNames):
-    '''Returns a dataframe of feature IDs where the species is present'''
-    #Create a data frame from the species data
-    useCols = ["FEATUREID",spp]
-    eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
-    #Pull just the records where the species occurs
-    sppDF = pd.merge(dataDF,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
-    #sppDF = eoDF[eoDF[spp] == 1]
-    
-    #Change NaNs to 0
-    sppDF[spp].fillna(0,inplace=True)
-    
-    return sppDF#[spp]
-    #THen concat this with the others
-
-def assignPresence(df,spp,FeatureIDs):
-    '''Adds a column and assigns 1 to presence values'''
-    #Insert column, assign zero as default
-    df.insert(0,spp,0)
-    #Select records with matching FeatureIDs
-    for FeatureID in FeatureIDs:
-        df.ix[df.FEATUREID == FeatureID,spp] = 1
-
 def mergePresAbs(eoCSV,speciesName,dataDF):
     '''Adds a column of species presence/absence to the dataFN'''
     #Create a data frame from the species data
@@ -88,9 +53,7 @@ def mergePresAbs(eoCSV,speciesName,dataDF):
     eoDF = pd.read_csv(eoCSV,usecols=useCols,dtype={'FEATUREID':str})
     
     #Join the presence absence data to the catchment data frame
-    idxDF = dataDF.set_index("FEATUREID")
-    outDF = pd.merge(eoDF,idxDF,left_on="FEATUREID",right_index=True)
-    #outDF = pd.merge(df,eoDF,how='inner',left_on="FEATUREID",right_on="FEATUREID")
+    outDF = pd.merge(eoDF,dataDF,how='right',left_on="FEATUREID",right_on="FEATUREID")
 
     #Change NaNs to 0
     outDF[speciesName] = outDF[speciesName].fillna(0)
@@ -100,8 +63,8 @@ def mergePresAbs(eoCSV,speciesName,dataDF):
 huc8s = getHUC8s(eoCSV, spp)
 print "{} was found in {} HUC8s".format(spp, len(huc8s))
 
-#Loop through StreamCat tables and create a dataframe of just the records
-#in the HUC8s where the species was found...
+##Loop through StreamCat tables and create a dataframe of just the records
+##in the HUC8s where the species was found...
 allFiles = os.listdir(dataFldr)     # List if all files in the StreamCat folder
 dataFrames = []                     # Initialize the list of dataFrames
 firstFile = True                    # Initialize variable to see if it's the first variable
@@ -142,6 +105,9 @@ del dataFrames
 #Add species presence absence data
 print "Prepending presence absence to data frame"
 outDF = mergePresAbs(eoCSV,spp,dataDF)
+
+#Remove the OID column
+outDF.drop("OID",axis=1,inplace=True)
 print "Resulting table has {0} columns and {1} records".format(outDF.shape[1],outDF.shape[0])
 
 #Write to a file for the spp
