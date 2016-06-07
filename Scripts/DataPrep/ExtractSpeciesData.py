@@ -14,8 +14,8 @@ import pandas as pd
 import numpy as np
 
 #Species to process
-spp = "Etheostoma_olmstedi"
-spp = "Acantharchus_pomotis"
+#spp = "Etheostoma_olmstedi"
+#spp = "Acantharchus_pomotis"
 spp = "Nocomis_leptocephalus"
 
 #Workspaces
@@ -96,63 +96,54 @@ def mergePresAbs(eoCSV,speciesName,dataDF):
     outDF[speciesName] = outDF[speciesName].fillna(0)
     return outDF
 
-#Get the HUC8s
+#Create a list of HUC8s in which the species was observed
 huc8s = getHUC8s(eoCSV, spp)
 print "{} was found in {} HUC8s".format(spp, len(huc8s))
 
-#Loop through StreamCat tables and create a dataframe of HUC8 records
-allFiles = os.listdir(dataFldr)
-dataFrames = []
-firstFile = True
-for f in allFiles:
-    #Only process the CSV files
-    if f[-4:] == ".csv":
+#Loop through StreamCat tables and create a dataframe of just the records
+#in the HUC8s where the species was found...
+allFiles = os.listdir(dataFldr)     # List if all files in the StreamCat folder
+dataFrames = []                     # Initialize the list of dataFrames
+firstFile = True                    # Initialize variable to see if it's the first variable
+
+for f in allFiles:                  # Loop through the StreamCat files
+    if f[-4:] == ".csv":            # Only process the CSV files
         #Get the full file name
         fullFN = os.path.join(dataFldr,f)
         print "Extracting records from {}".format(f)
-        #Retrieve only the HUC8 records as a data frame
+        #Retrieve only the HUC8 records as a data frame using above function
         dataDF = spatialSelect(fullFN,huc8s)
         print "...{} catchment records extracted".format(len(dataDF))
         #If not the first file, then remove the 1st 5 columns (duplicates)
         if  firstFile:
-            #Prepend species presence absence to table
             firstFile = False
+            colNames = list(dataDF.columns)
         else:
-            dataDF = dataDF[dataDF.columns[5:]]
-
-        #Convert to smaller datatypes to save memory
+            #Cross check the column names to skip duplicates
+            newCols = []
+            for col in list(dataDF.columns):
+                if not (col in colNames):
+                    newCols.append(col)
+            dataDF = dataDF[newCols]
+        #Convert columns to smaller datatypes to save memory
         for c in dataDF.columns:
             if dataDF[c].dtype.type == np.float64:
                 dataDF[c]= dataDF[c].astype(np.float32)
         #Append to the list of data frames
         dataFrames.append(dataDF)
 
-#Create the species presence/absence data frame
-print "Creating presence absence data frame"
-#sppDF = makeSpeciesDF(eoCSV,dataFrames[1],spp)
-#dataFrames.insert(0,sppDF)
-
-#Merge dfs into one
+#Merge all file data frames into one
 print "Merging data frames"
 dataDF = pd.concat(dataFrames,axis=1)
 
-#Add species presence absence data
-outDF = mergePresAbs(eoCSV,spp,dataDF)
-
 #Remove single dfs to free memory
 del dataFrames
+
+#Add species presence absence data
+print "Prepending presence absence to data frame"
+outDF = mergePresAbs(eoCSV,spp,dataDF)
 print "Resulting table has {0} columns and {1} records".format(outDF.shape[1],outDF.shape[0])
 
 #Write to a file for the spp
 print "Saving to {}".format(outFN)
 outDF.to_csv(outFN,index_label="OID")
-
-
-##NEXT STEPS
-# Remove COLUMNS where spp is present but has -9999 in an attribute
-# Remove RECORDS where spp is not presence but has -9999 in an attribute
-# Identify and remove COLUMNS that don't have a correlation with presence/absence
-# Identify cross correlated columns; remove lower ranking column
-  ## Need to develope column ranking table
-# End result is a table of records and attribues to model with Maxent
-  ## Generate a table of modified conditions on which to project Maxent results
