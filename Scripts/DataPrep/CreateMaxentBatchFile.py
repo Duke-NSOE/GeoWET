@@ -51,7 +51,7 @@ else: msg("Setting output to {}".format(outDir))
 
 # Begin creating the batch run string with boilerplate stuff
 msg("Initializing the Maxent batch command")
-runString = "java -mx1024m -jar {}".format(maxentJarFile)
+runString = "java -mx4096m -d64 -jar {}".format(maxentJarFile)
 
 # set samples file
 msg("...Setting samples file to \n    {}".format(swdFile))
