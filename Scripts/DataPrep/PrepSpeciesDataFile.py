@@ -110,5 +110,11 @@ print "...Starting with {} columns".format(sppDF.shape[1])
 sppDF = removeXCorrelated(sppDF)
 print "...{} columns remain".format(sppDF.shape[1])
 
+print "Adjusting column names to work with MaxEnt" #SPP,X,Y
+sppDF.rename(columns = {'GRIDCODE':'X','REACHCODE':'Y'}, inplace=True)
+sppDF.drop('OID',axis=1,inplace=True)
+sppDF.drop('FEATUREID',axis=1,inplace=True)
+sppDF.drop('HUC_12',axis=1,inplace=True)
+
 #write file to csv
 sppDF.to_csv(outFN,index_label="OID")
