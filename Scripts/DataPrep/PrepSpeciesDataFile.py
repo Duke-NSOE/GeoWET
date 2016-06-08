@@ -30,7 +30,7 @@ def removeAbsenceNullRows(theDF):
     for fld in list(theDF.columns):
         #Get the number of records before deletion
         dbSize = len(theDF)
-        theDF = theDF[~((theDF[sppName] == 0) & (theDF[fld] == -9999))]
+        theDF = theDF[~((theDF.Species == 'Background') & (theDF[fld] == -9999))]
         #Calculate the number of records deleted
         dbDelta = dbSize - len(theDF)
         #LOGGING: Report how many records deleted for the current field
@@ -50,7 +50,12 @@ def removePresenceNullColumns(theDF):
 
 def removeUncorrelated(theDF):
     '''Remove attributes with no correlation with presence/absence'''
-    sppVector = theDF[sppName]
+    sppVector = theDF.Species
+    #Convert species/background to binary 1/0
+    sppVector.replace("Background",0,inplace=True)
+    sppName = pd.unique(sppVector).tolist()[1]
+    sppVector.replace(sppName,1,inplace=True)
+    #Compute correlation with presence/absence
     for fld in list(theDF.columns)[6:]:
         envVector = theDF[fld]
         pearson = stats.pearsonr(sppVector, envVector)
@@ -60,6 +65,9 @@ def removeUncorrelated(theDF):
         if abs(pValue) > 0.05:
             #print "%s is not significant (p = %2.3f)" %(fld,pValue)
             theDF.drop(fld,axis=1,inplace=True)
+    #Return column values
+    sppVector.replace(0,"Background",inplace=True)
+    sppVector.replace(1,sppName,inplace=True)
     return theDF
 
 def removeXCorrelated(theDF,threshold=0.75):
@@ -117,4 +125,4 @@ sppDF.drop('FEATUREID',axis=1,inplace=True)
 sppDF.drop('HUC_12',axis=1,inplace=True)
 
 #write file to csv
-sppDF.to_csv(outFN,index_label="OID")
+sppDF.to_csv(outFN,index_label="OID",index=False)
