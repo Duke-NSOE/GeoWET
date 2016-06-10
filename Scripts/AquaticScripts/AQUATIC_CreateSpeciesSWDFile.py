@@ -92,9 +92,13 @@ def mergePresAbs(sppFN,speciesName,dataDF):
     #Create a data frame from the species data
     useCols = ["FEATUREID",speciesName]
     eoDF = pd.read_csv(sppFN,usecols=useCols,dtype={'FEATUREID':str})
-    
+
     #Join the presence absence data to the catchment data frame
     outDF = pd.merge(eoDF,dataDF,how='right',on="FEATUREID")    
+    
+    #Set Nan to Zeros
+    outDF[speciesName] = outDF[speciesName].fillna(0)
+
     return outDF
 
 def removeAbsenceNullRows(theDF,speciesName):
@@ -127,36 +131,47 @@ def removeUncorrelated(theDF,speciesName,log=""):
         pearson = stats.pearsonr(sppVector, envVector)
         coeff = pearson[0]
         pValue = pearson[1]
-        corDict[fld] = coeff
         #Print output to the CSV file
         if abs(pValue) > 0.05:
             log.write("   ...Removing %s [p=%2.3f]\n"%(fld,pValue))
             theDF.drop(fld,axis=1,inplace=True)
+        else:
+            #Add the field to the correlation dictionary
+            corDict[fld] = coeff
     #Return column values
     sppVector.replace(0,"Background",inplace=True)
     sppVector.replace(1,sppName,inplace=True)
     return theDF, corDict
 
-def removeXCorrelated(theDF,threshold=0.75):
+def removeXCorrelated(theDF, corrDict, log, threshold=0.75):
     #Initialize the list of fields to drop
     dropFlds = []
-    #Include only StreamCat attributes
-    flds = list(theDF.columns)[6:]
+    #Create a list of fields from the corrDict keys, sorted on value
+    flds = sorted(corrDict,key=corrDict.get)
     nCols = len(flds)
-    #Compute cross correlation pairs; add 2nd field to drop list
+    #Compute cross correlation pairs; add field to drop list
     for i in range(0,nCols):
+        #Get the ith field; skip already marked for deletion
+        iFld = flds[i]
+        if iFld in dropFlds:
+            continue
+        #Get the correlation
         for j in range(0,nCols):
-            if j > i:
-                iFld = flds[i]; jFld =flds[j]
+            if j > i: #Only process half the matrix
+                #Get the jth field
+                jFld =flds[j]
+                #Skip if one of the fields is already marked for deletion
+                if jFld in dropFlds:
+                    continue
+                #Get the value vectors for each field
                 v1 = theDF[iFld]
                 v2 = theDF[jFld]
                 # Calculate the correlation coefficient
                 pearson = stats.pearsonr(v1, v2)[0]
                 # If the coefficient is > the threshold consider them redundant and add to the CSV
                 if abs(pearson) >= float(threshold):
-                    #print "{}, {}, {}".format(iFld,jFld,pearson)
-                    #Need ranking to decide which field to drop
-                    #For now, just drop the 2nd field
+                    log.write("     %s & %s xcorrelated @ %2.2f; "%(iFld,jFld,pearson))
+                    #Because the fields are sorted, drop the 2nd field (lower correlation)
                     if not (jFld in dropFlds): dropFlds.append(jFld)
     #Drop cross correlated fields
     for dropFld in dropFlds:
@@ -258,22 +273,31 @@ endColCount = sppDF.shape[1]
 droppedColCount = startColCount - endColCount
 if droppedColCount > 0:
     msg("...{} columns dropped".format(droppedColCount))
-    logFile.write("   ...{} columns removed: no sign. corr.".format(droppedColCount))
+    logFile.write("   ...{} columns removed: no sign. corr.\n".format(droppedColCount))
 
 msg("Removing cross correlated attributes")
-logFile.write("Checking for cross correlated columns")
-sppDF = removeXCorrelated(sppDF)
-print "...{} columns remain".format(sppDF.shape[1])
+logFile.write("Checking for cross correlated columns\n")
+startColCount = sppDF.shape[1]
+sppDF = removeXCorrelated(sppDF,correlationDict,logFile)
+endColCount = sppDF.shape[1]
+droppedColCount = startColCount - endColCount
+if droppedColCount > 0:
+    msg("...{} X correlated cols dropped".format(droppedColCount))
+    logFile.write("   ...{} X correlated cols dropped\n".format(droppedColCount))
 
 msg("Adjusting column names to work with MaxEnt")
 logFile.write("Adjusting column names to work with MaxEnt\n")
-sppDF.rename(columns = {'GRIDCODE':'X','REACHCODE':'Y'}, inplace=True)
+sppDF.rename(columns = {sppName:'Species','GRIDCODE':'X','REACHCODE':'Y'}, inplace=True)
+sppDF.loc[sppDF['Species']==1,'Species'] = sppName
+sppDF.loc[sppDF['Species']==0,'Species'] = "Background"
+
 sppDF.drop('FEATUREID',axis=1,inplace=True)
 sppDF.drop('HUC_12',axis=1,inplace=True)
 
+
 #write file to csv
 msg("Writing file to {}".format(outFN))
-logFile.write("File written to {}".format(outFN))
+logFile.write("File written to {}\n".format(outFN))
 sppDF.to_csv(outFN,index_label="OID",index=False)
 
 #close the log file
