@@ -31,12 +31,13 @@ import sys, os, datetime
 import pandas as pd
 import numpy as np
 from scipy import stats
+import arcpy
 
 #Script inputs
-sppName = 'Nocomis_leptocephalus'
-dataFldr = r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
-eoCSV = r'C:\workspace\GeoWET\Data\ToolData\SpeciesOccurrences.csv'
-outFN = r'C:\workspace\GeoWET\Data\SpeciesModels\{}_swd.csv'.format(sppName)
+sppName = sys.argv[1] #'Nocomis_leptocephalus'
+dataFldr = sys.argv[2] #r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
+eoCSV = sys.argv[3] #r'C:\workspace\GeoWET\Data\ToolData\SpeciesOccurrences.csv'
+outFN = sys.argv[4] #r'C:\workspace\GeoWET\Data\SpeciesModels\{}_swd.csv'.format(sppName)
 
 #Aux files
 logFilename = outFN[:-4] + "_metadata.txt"
@@ -45,13 +46,15 @@ logFilename = outFN[:-4] + "_metadata.txt"
 def msg(txt,severity=""):
     '''Reports message to interactive windor or ArcPy, if loaded'''
     print txt
-    if "arcpy" in dir():
+    try:
         if severity=="Warning":
             arcpy.AddWarning(txt)
         elif severity=="Error":
             arcpy.AddError(txt)
         else:
             arcpy.AddMessage(txt)
+    except:
+        pass
 def checkSpeciesName(speciesName,sppFN):
     '''Ensures that the supplied species name exists in the observation table'''
     import csv

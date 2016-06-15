@@ -18,23 +18,30 @@
 import sys, os
 import pandas as pd
 
+
 # Inputs
-swdFile = r'C:\\workspace\\GeoWET\\Data\\SpeciesModels\\Nocomis_leptocephalus_swd.csv'
+swdFile = sys.argv[1]#r'C:\\workspace\\GeoWET\\Data\\SpeciesModels\\Nocomis_leptocephalus_swd.csv'
+prjFile = sys.argv[2]
+runMaxent = sys.argv[3]
 
 # Derived inputs
 speciesName = os.path.basename(swdFile)[:-8]
 speciesFldr = os.path.dirname(swdFile)
 maxentFile = os.path.join(speciesFldr,"{}.bat".format(speciesName))
 
-# Whether to run Maxent as part of the batch file
-autorun = "false"
-
 # Number of processors
 numProcessors = 16
+
+# Set Autorun in batch file
+autorun = "false"
 
 ## ---Functions---
 def msg(txt,severity=""):
     print txt
+    try:
+        arcpy.AddMessage(txt)
+    except:
+        pass
         
 ## ---Processes---
 # Check that the maxent.jar file exists in the scripts folder
@@ -46,7 +53,7 @@ else:
     msg("Maxent.jar found in Scripts folder".format(maxentJarFile))
 
 # Check that the output folder exists; create it if not
-outDir = os.path.abspath(os.path.dirname(swdFile)+"\\Output")
+outDir = os.path.join(speciesFldr,speciesName)
 if not(os.path.exists(outDir)):
     msg("Creating output directory")
     os.mkdir(outDir)
@@ -65,7 +72,7 @@ msg("...Setting enviroment layers file to \n    {}".format(swdFile))
 runString += " environmentallayers={}".format(swdFile)
     
 # set output directory
-msg("...Setting output directory to {}\n    ".format(outDir))
+msg("...Setting output directory to {}    ".format(outDir))
 runString += " outputdirectory={}".format(outDir)
 
 # enable response curves
@@ -126,11 +133,20 @@ for catItem in ("StreamOrde","FCODE"):
         msg("...Setting <{}> to categorical".format(catItem))
         runString += " togglelayertype={}".format(catItem)
 '''
+
+#Add Projection file, if supplied
+if prjFile <> "#":
+    msg("Setting projection file to {}".format(prjFile))
+    runString += " projectionlayers={}".format(prjFile)
+
 # Write commands to batch file
 msg("Writing commands to batchfile {}".format(maxentFile))
 outFile = open(maxentFile,'w')
 outFile.write(runString)
 outFile.close()
 
-
+# Run MaxEnt, if set
+if runMaxent:
+    msg("Running Maxent")
+    os.system(maxentFile)
     
