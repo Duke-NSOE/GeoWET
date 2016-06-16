@@ -71,9 +71,6 @@ def getHUC8(prjFC,hucFC):
     #Return the list of reachcodes
     return huc8
 
-
-def getStreamCatLUT(fname):
-    lutDF = pd.read_excel(fieldMapXLS,sheetname="AttribLookup") 
 def getHUC8Data(csvFile,huc8):
     '''Creates a dataframe of the HUC8 Records from a catchment attribute file'''
     #Convert CSV to pandas data frame
@@ -146,7 +143,6 @@ def getNLCDValues(flwlineFC,nlcdRstr,elevRstr,prjFC):
 huc8 = getHUC8(projectFC,huc12FC)
 print "Project is in HUC8: {}".format(huc8)
 
-##1. Get the fields to change map for WETLAND project
 #Import the Excel file listing the fields...
 fldmapDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 
@@ -160,25 +156,38 @@ csvFN = os.path.join(dataFolder,csvFile)
 
 #Create a list of fields to alter
 fldSeries = fldsDF["Attribute"][fldsDF["File"] == str(csvFN)]
-
-#Get a list of CATCHMENT attributes to change
-##catSeries  = fldSeries.where(fldSeries.str[-3:] == "Cat")
-        
+   
 #Create a dataframe of the HUC8 data
-##-------dataDF = getHUC8Data(csvFN,huc8)
+dataDF = getHUC8Data(csvFN,huc8)
 print "{} records returned".format(dataDF.shape[0])
 
 #Create a dictionary of NLCD changes in the catchment
-##------dataDict = getNLCDValues(flowlineFC,nlcdRaster,elevRaster,projectFC)
+dataDict = getNLCDValues(flowlineFC,nlcdRaster,elevRaster,projectFC)
  #Values in this dictionary are total, buffer, midslope, and high slope
  # declines for the project, in cells. 
 
+#Update the dataDict to show gain in wetland/forest
+if projectType == 'Wetland':
+    gainCode = 90 #NLCD woody wetland
+else:
+    gainCode = 43 #NLCD mixed forest
+#Get total areas of project
+prjAreas = [0,0,0,0]
+for k,v in dataDict.items():
+    if k <> gainCode:
+        #Loop through scenarios
+        for i in range(4):
+            prjAreas[i] -= v[i]
+#Change wetland/forest change to prjArea
+dataDict[gainCode] = prjAreas
+   
 #Get the list of NHD gridcodes within the project
 gridCodes = getGridcodes(projectFC,catchmentFC)
+gridCode = gridCodes[0]
 
 #Get the data for the gridcodes
 gridDF = dataDF[dataDF.GRIDCODE.isin(gridCodes)]
-outDF = gridDF
+outDF = gridDF.copy()
 catArea = gridDF.CatAreaSqKm.sum()
 
 #Get the lookup table fromthe XLSX file
@@ -191,7 +200,7 @@ for nlcdCode,decline in dataDict.items():
     scCode = str(lutDict[nlcdCode])
     nlcdFld = "Pct{}2011Cat".format(scCode)
     #Extract the CURRENT pct area of the catchment
-    curPct = gridDF[nlcdFld].sum()
+    curPct = gridDF[nlcdFld].values[0]
     #Convert to total area (sq km)
     nlcdArea = curPct * catArea / 100
     #Get lost area from dictionary
@@ -200,8 +209,11 @@ for nlcdCode,decline in dataDict.items():
     newNlcdArea = nlcdArea - lostNlcdArea
     #Convert back to pct
     newPct = newNlcdArea / catArea * 100
-    print "Reducing NLCD %s from %2.4f to %2.4f sq km" %(nlcdCode,nlcdArea,newNlcdArea,newPct)
+    print "Changing NLCD %s from %2.1f to %2.1f pct" %(nlcdCode,curPct,newPct)
     #Update the output dataframe
-    outDF[nlcdFld] = newPct
+    outDF[nlcdFld].values[0] = newPct
+    dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdFld] = newPct
 
+#Save the DF
+dataDF.to_csv(outputSWDFile,index_label="OID",index=False)
  
