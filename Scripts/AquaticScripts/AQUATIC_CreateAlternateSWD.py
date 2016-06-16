@@ -177,40 +177,56 @@ huc8 = getHUC8(projectFC,huc12FC)
 print "Project is in HUC8: {}".format(huc8)
 
 #Import the Excel file listing the fields to change...
+print "Reading in field mappings"
 fldmapDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 
+#Get a list of all files
+allCSVFiles = pd.unique(fldmapDF.File).tolist()
+
 #Filter for fields changed in wetland project
-fldsDF = fldmapDF[fldmapDF["WetlandProject"] <> 'Unchanged']
-csvFiles = pd.unique(fldsDF.File).tolist()
+fldsDF = fldmapDF[fldmapDF["NLCDMap"] > -9999]
+modCSVFiles = pd.unique(fldsDF.File).tolist()
+
+#Create list of dataframes
+dataFrames = []
 
 ##---REPLACE WITH LOOP---##
-for csvFile in [csvFiles[-1]]:
-    print "Processing {}".format(csvFile)
-
-    #Get the relevant attributes
-    attribDF = fldsDF[fldsDF["File"] == str(csvFile)]
-    
-    #Get the full file name (with path)
+for csvFile in allCSVFiles:
+   #Get the full file name (with path)
     csvFN = os.path.join(dataFolder,csvFile)
       
     #Create a dataframe of the HUC8 data from the CSV file
     dataDF = getHUC8Data(csvFN,huc8)
     print "...{} records returned".format(dataDF.shape[0])
+    
+    #Skip processing if not in modify list
+    if not csvFile in modCSVFiles:
+        print "Skipping {}".format(csvFile)
+        dataFrames.append(dataDF)
+        continue
+        
+    print "Processing {}".format(csvFile)
 
     #Get the data for the gridcodes the project covers
     gridDF = dataDF[dataDF.GRIDCODE.isin(gridCodes)]
     areaColumn = gridDF.columns[5]
     catArea = gridDF[areaColumn].sum()
     
-    #Get the lookup table fromthe XLSX file
+    #Get the attributes listed for the current stream cat csv file
+    attribDF = fldsDF[fldsDF["File"] == str(csvFile)]
+    
+    #Creat a dictionary to cross reference NLCD code to attribute
     lutDict = attribDF.set_index('NLCDMap')['Attribute'].to_dict()
 
     #Update NLCD fields for the selected catchment
     for nlcdCode,areaChanges in dataDict.items():
+
+        #Check that change occured for the current nlcd code
+        if nlcdCode not in lutDict.keys():
+            print "...No change in NLCD %s" %nlcdCode
+            continue
         
         #Get the StreamCat code corresponding to the NLCD code
-        #scCode = str(lutDict[nlcdCode])
-        #nlcdFld = "Pct{}2011Cat".format(scCode)
         nlcdFld = str(lutDict[nlcdCode]).strip()
         
         #Extract the CURRENT pct area of the catchment
@@ -231,10 +247,14 @@ for csvFile in [csvFiles[-1]]:
         newNlcdArea = nlcdArea - lostNlcdArea
         #Convert back to pct
         newPct = newNlcdArea / catArea * 100
-        print "Changing NLCD %s from %2.1f to %2.1f pct" %(nlcdCode,curPct,newPct)
+        print "...Changing NLCD %s from %2.1f to %2.1f pct" %(nlcdCode,curPct,newPct)
         #Update the output dataframe
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdFld] = newPct
 
-    #Save the DF
-    dataDF.to_csv(outputSWDFile,index_label="OID",index=False)
+        #Append to collection
+        dataFrames.append(dataDF)
+        
+#Merge all dfs and write to file
+outDF = pd.concat(dataFrames)
+outDF.to_csv(outputSWDFile,index_label="OID",index=False)
  
