@@ -138,7 +138,40 @@ def getNLCDValues(flwlineFC,nlcdRstr,elevRstr,prjFC):
     #Return the series
     return outDict
 
+def updateRasterCounts(datadict,prjType="Wetland"):
+    '''Updates the dataDict to show gain in wetland/forest'''
+    #Assign the gainCode to the NLCD cover type
+    if prjType == 'Wetland':
+        gainCode = 90 #NLCD woody wetland
+    else:
+        gainCode = 43 #NLCD mixed forest
+        
+    #Get total existing areas of project not in project mode
+    prjAreas = [0,0,0,0]
+    for k,v in datadict.items():
+        if k <> gainCode:
+            #Loop through scenarios
+            for i in range(4):
+                prjAreas[i] -= v[i]
+                
+    #Change wetland/forest change to prjArea
+    datadict[gainCode] = prjAreas
+
+    #Return the revised dictionary
+    return datadict
+
 ##---PROCEDURES----
+#Create a dictionary of NLCD changes in the catchment
+dataDict = getNLCDValues(flowlineFC,nlcdRaster,elevRaster,projectFC)
+
+#Update the dataDict to show gain in wetland/forest
+dataDict = updateRasterCounts(dataDict,projectType)
+   
+#Get the list of NHD gridcodes within the project
+###>>>NEED TO ADAPT TO IF A PROJECT SPANS CATCHMENTS<<<<
+gridCodes = getGridcodes(projectFC,catchmentFC)
+gridCode = gridCodes[0]
+
 #Get the HUC8 in which the project occurs
 huc8 = getHUC8(projectFC,huc12FC)
 print "Project is in HUC8: {}".format(huc8)
@@ -150,40 +183,13 @@ fldmapDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 fldsDF = fldmapDF[fldmapDF["WetlandProject"] <> 'Unchanged']
 csvFiles = pd.unique(fldsDF.File).tolist()
 
-##REPLACE WITH LOOP##
+##---REPLACE WITH LOOP---##
 csvFile = csvFiles[-2]
 csvFN = os.path.join(dataFolder,csvFile)
-
-#Create a list of fields to alter
-fldSeries = fldsDF["Attribute"][fldsDF["File"] == str(csvFN)]
-   
-#Create a dataframe of the HUC8 data
+  
+#Create a dataframe of the HUC8 data from the CSV file
 dataDF = getHUC8Data(csvFN,huc8)
 print "{} records returned".format(dataDF.shape[0])
-
-#Create a dictionary of NLCD changes in the catchment
-dataDict = getNLCDValues(flowlineFC,nlcdRaster,elevRaster,projectFC)
- #Values in this dictionary are total, buffer, midslope, and high slope
- # declines for the project, in cells. 
-
-#Update the dataDict to show gain in wetland/forest
-if projectType == 'Wetland':
-    gainCode = 90 #NLCD woody wetland
-else:
-    gainCode = 43 #NLCD mixed forest
-#Get total areas of project
-prjAreas = [0,0,0,0]
-for k,v in dataDict.items():
-    if k <> gainCode:
-        #Loop through scenarios
-        for i in range(4):
-            prjAreas[i] -= v[i]
-#Change wetland/forest change to prjArea
-dataDict[gainCode] = prjAreas
-   
-#Get the list of NHD gridcodes within the project
-gridCodes = getGridcodes(projectFC,catchmentFC)
-gridCode = gridCodes[0]
 
 #Get the data for the gridcodes
 gridDF = dataDF[dataDF.GRIDCODE.isin(gridCodes)]
