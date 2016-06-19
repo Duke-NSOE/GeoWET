@@ -197,7 +197,6 @@ for csvFile in allCSVFiles:
       
     #Create a dataframe of the HUC8 data from the CSV file
     dataDF = getHUC8Data(csvFN,huc8)
-    print "...{} records returned".format(dataDF.shape[0])
     
     #Skip processing if not in modify list
     if not csvFile in modCSVFiles:
@@ -251,10 +250,11 @@ for csvFile in allCSVFiles:
         #Update the output dataframe
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdFld] = newPct
 
-        #Append to collection
-        dataFrames.append(dataDF)
+    #Append to collection
+    dataFrames.append(dataDF)
         
 #Merge all dfs and write to file
-outDF = pd.concat(dataFrames)
+outDF = pd.concat(dataFrames,axis=1)
+#Replace NaN with zeros
 outDF.to_csv(outputSWDFile,index_label="OID",index=False)
  
