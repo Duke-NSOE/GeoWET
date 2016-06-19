@@ -19,11 +19,14 @@ import sys, os
 import pandas as pd
 
 # Inputs
-speciesName = "Nocomis_leptocephalus"
-speciesFldr = r'C:\workspace\GeoWET\Data\SpeciesModels'
-swdFile = os.path.join(speciesFldr,"{}_swd.csv".format(speciesName))
+swdFile = r'C:\\workspace\\GeoWET\\Data\\SpeciesModels\\Nocomis_leptocephalus_swd.csv'
+
+# Derived inputs
+speciesName = os.path.basename(swdFile)[:-8]
+speciesFldr = os.path.dirname(swdFile)
 maxentFile = os.path.join(speciesFldr,"{}.bat".format(speciesName))
 
+# Whether to run Maxent as part of the batch file
 autorun = "false"
 
 # Number of processors
