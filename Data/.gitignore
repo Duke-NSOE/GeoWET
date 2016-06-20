@@ -4,6 +4,7 @@ StreamCat/*
 Tooldata/NHDStreamCat.gdb/*
 Tooldata/NHDStreamCat.gdb/*
 Tooldata/NCStreamCat.gdb/*
+Tooldata/*.gdb
 SpeciesModels/*
 TNCResilience/*
 EEP_030501.gdb/*
