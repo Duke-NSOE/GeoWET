@@ -59,6 +59,13 @@ if not(os.path.exists(outDir)):
     os.mkdir(outDir)
 else: msg("Setting output to {}".format(outDir))
 
+# Add folder as model output (if run from ArcMap)
+try:
+    arcpy.SetParameter(3,outDir)
+    msg("Output folder set to {}".format(outDir))
+except:
+    pass
+
 # Begin creating the batch run string with boilerplate stuff
 msg("Initializing the Maxent batch command")
 runString = "java -mx4096m -d64 -jar {}".format(maxentJarFile)
@@ -146,7 +153,7 @@ outFile.write(runString)
 outFile.close()
 
 # Run MaxEnt, if set
-if runMaxent:
+if runMaxent == 1:
     msg("Running Maxent")
     os.system(maxentFile)
     
