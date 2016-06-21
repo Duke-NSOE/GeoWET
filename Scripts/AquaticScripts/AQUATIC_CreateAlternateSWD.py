@@ -24,27 +24,41 @@ import pandas as pd
 import numpy as np
 
 arcpy.env.overwriteOutput = True
-arcpy.env.workspace = r'C:\workspace\GeoWET\scratch'
-arcpy.env.scratchWorkspace =  r'C:\workspace\GeoWET\scratch'
+#arcpy.env.workspace = r'C:\workspace\GeoWET\scratch'
+#arcpy.env.scratchWorkspace =  r'C:\workspace\GeoWET\scratch'
 arcpy.CheckOutExtension("spatial")
 
 #Inputs
-projectFC = r'C:\workspace\GeoWET\Data\Templates\ExampleProject.shp'
-projectType = 'Wetland'
-dataFolder = r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
-outputSWDFile = r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
+projectFC = sys.argv[1]#r'C:\workspace\GeoWET\Data\Templates\ExampleProject.shp'
+projectType = sys.argv[2]#'Wetland'
+dataFolder = sys.argv[3]#r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
+outputSWDFile = sys.argv[10]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
 
 #Static inputs
-fieldMapXLS = r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.xlsx'
-nlcdRaster = r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
-flowlineFC = r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
-elevRaster = r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
-catchmentFC = r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDCatchments'
-huc12FC = r'C:\workspace\GeoWET\Data\EEP_030501.gdb\HUC12'
-flowNet = r'C:\workspace\GeoWET\Data\ToolData\NHD_H_03050102_GDB.gdb\Hydrography\HYDRO_NET'
+fieldMapXLS = sys.argv[4]#r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.xlsx'
+nlcdRaster = sys.argv[5]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
+flowlineFC = sys.argv[6]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
+elevRaster = sys.argv[7]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
+catchmentFC = sys.argv[8]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDCatchments'
+flowNet = sys.argv[9]#r'C:\workspace\GeoWET\Data\ToolData\NHD_H_03050102_GDB.gdb\Hydrography\HYDRO_NET'
 flowNetFC = os.path.join(flowNet,'..',"NHDFlowline")
 
 ##-----------FUNCTIONS----------
+def msg(txt,severity=""):
+    '''Feedback'''
+    print msg
+    #Send to ArcPy, if tool run from ArcMap
+    try:
+        if severity=="warning":
+            arcpy.AddWarning(txt)
+        elif severity=="error":
+            arcpy.AddError(txt)
+        else:
+            arcpy.AddMessage(txt)
+    except:
+        pass
+    return
+            
 def getGridcodes(prjFC,catchFC):
     '''Returns a list of NHD Reachcodes in which the project occurs (via clip)'''
     #Create a feature class of just the catchments intersecting the project
@@ -81,19 +95,6 @@ def getDownstreamGridCodes(gridcode,catchFC,flownet,flownetFC):
             outGridcodes.append(rec[0])
     return outGridcodes
    
-def getHUC8(prjFC,hucFC):
-    '''Returns the HUC8s in which the project occurs (via clip)'''
-    #Create a feature class of just the catchments intersecting the project
-    clipFC = arcpy.Clip_analysis(hucFC,projectFC,"in_memory/clipFC")
-    #Loop through the feature classes and add them to a list
-    with arcpy.da.SearchCursor(clipFC,"HUC_8") as cur:
-        rec = cur.next()
-        huc8 = str(rec[0])
-    #Delete the feature class
-    arcpy.Delete_management(clipFC)
-    #Return the list of reachcodes
-    return huc8
-
 def getCatchmentData(csvFile,downstreamCodes):
     '''Creates a dataframe of the HUC8 Records from a catchment attribute file'''
     #Convert CSV to pandas data frame
@@ -113,7 +114,7 @@ def makeDataFramefromCSVs(dataFldr,gridcodes):
     for dataFile in dataFiles:
         #Skip if not a CSV file
         if dataFile[-4:].upper() <> ".CSV": continue
-        print "Processing streamcat file: {}".format(dataFile)
+        msg("Processing streamcat file: {}".format(dataFile))
         #Get the full file path
         csvFN = os.path.join(dataFolder,dataFile)
         #Convert catchment records to a data frame
@@ -132,7 +133,7 @@ def makeDataFramefromCSVs(dataFldr,gridcodes):
         dataFrames.append(csvDF)
 
     #Merge dataframes
-    print("...merging dataframes")
+    msg("...merging dataframes")
     dataDF = pd.concat(dataFrames,axis=1)
     #Return the data frame
     return dataDF
@@ -224,6 +225,7 @@ def updateRasterCounts(datadict,prjType="Wetland"):
     return datadict
 
 ##---PROCEDURES----
+msg("---------Initializing analysis-----------")
 ##[1]Create a dataframe of NLCD areas lost or gained
 #Create a dictionary of NLCD changes in the catchment
 dataDict = getNLCDValues(flowlineFC,nlcdRaster,elevRaster,projectFC)
@@ -233,22 +235,22 @@ dataDict = updateRasterCounts(dataDict,projectType)
 ##[2]Get the GRIDCODEs of the catchment(s) in which the project occurs
 gridCodes = getGridcodes(projectFC,catchmentFC)
 gridCode = gridCodes[0]
-print "Project occurs in catchment {}".format(gridCode)
+msg("Project occurs in catchment {}".format(gridCode))
 
 ##[3]Trace downstream to get the downstream catchments
 dsGridCodes = getDownstreamGridCodes(gridCode,catchmentFC,flowNet,flowNetFC)
-print "{} catchments downstream".format(len(dsGridCodes))
+msg("{} catchments downstream".format(len(dsGridCodes)))
 
 ##[4]Create dataframes of selected catchments and merge into one...
 #Append the project catchment to downstream ones
 gridCodes = dsGridCodes
 gridCodes.append(gridCode)
 dataDF = makeDataFramefromCSVs(dataFolder,gridCodes)
-print "{} catchment attributes extracted".format(dataDF.shape[1])
+msg("{} catchment attributes extracted".format(dataDF.shape[1]))
 
 ##[5]Adjust NLCD related attributes in the project catchment
 #Read in the StreamCatInfo table
-print "Reading in field mappings"
+msg("Reading in field mappings")
 lutDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 
 #Process changes record for the catchment itself
@@ -291,7 +293,7 @@ for nlcdType, changeValues in dataDict.items():
         #Calculate new percentage
         newPct = newArea / baseArea * 100.0
         if newArea > 0:
-            print "   ...%s has decreased %2.2f pct (%s km2)" %(nlcdAttrib,(currentPct - newPct),changeArea)
+            msg("   ...%s has decreased %2.2f pct (%s km2)" %(nlcdAttrib,(currentPct - newPct),changeArea))
         #Update the data frame
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct
         
@@ -300,7 +302,7 @@ for nlcdType, changeValues in dataDict.items():
 wsOnlyDF = lutDF.loc[lutDF.CatWs == 'WS']
 #Loop through each downstream catchment record
 for gridcode in gridCodes:
-    print "Processing catchment# {}".format(gridcode)
+    msg("Processing catchment# {}".format(gridcode))
     #Retrieve the record for the current gridCode
     catchDF = dataDF[dataDF.GRIDCODE == gridcode]
 
