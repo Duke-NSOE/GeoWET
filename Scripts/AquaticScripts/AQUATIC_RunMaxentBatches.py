@@ -8,8 +8,11 @@
 import sys, os
 
 #Inputs
-modelFolder = r'C:\workspace\GeoWET\Data\SpeciesModels'
-prjFilename = r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD1.csv'
+modelFolder = sys.argv[1]#r'C:\workspace\GeoWET\Data\SpeciesModels'
+prjFilenames = sys.argv[2]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD1.csv'
+
+#Derived inputs
+prjFilename = prjFilenames.replace(";",",")
 
 #Msg function
 def msg(txt):
@@ -53,3 +56,4 @@ for f in allFiles:
             runCmd = setProjectFN(runCmd,prjFilename)
         msg(runCmd)
         os.system(runCmd)
+        break
