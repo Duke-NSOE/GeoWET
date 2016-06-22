@@ -9,16 +9,17 @@ import numpy as np
 import arcpy
 
 #Inputs
-species = sys.argv[1]#"Etheostoma_olmstedi"
-sppFolder = sys.argv[2]#r'C:\workspace\GeoWET\Data\SpeciesModels'
-catchmentFN = sys.argv[3]#r'C:\workspace\GeoWET\Data\ToolData\NC_Results.gdb\CatchmentAttributes2'
+currentFN = sys.argv[1]
+projectFN = sys.argv[2]
+catchmentFN = sys.argv[3]
 
 #Derived inputs
-currentFN = sppFolder+'\{0}\{0}.csv'.format(species)
-projectFN = sppFolder+'\{0}\{0}_ExampleProject_SWD.csv'.format(species)
+species = os.path.basename(currentFN[:-4])
+sppFolder = os.path.dirname(currentFN)
+allSppFolder = os.path.dirname(sppFolder)
 
 #Output
-outputFC = sys.argv[4]#r'C:\workspace\GeoWET\scratch\{}_Uplift.shp'.format(species)
+outputFC = sys.argv[4]
 
 ##---FUNCTIONS---
 def msg(txt,severity=""):
@@ -32,21 +33,7 @@ def msg(txt,severity=""):
 
 ##---PROCEDURES---
 msg("Processing results for {}".format(species))
-
-#Get the current conditions results
-currentFN = sppFolder+'\{0}\{0}.csv'.format(species)
-msg("Locating Maxent results{}".format(currentFN))
-if not os.path.exists(currentFN):
-    msg("Model results not found","error")
-    sys.exit(1)
-    
-#Get the project conditions
-projectFN = sppFolder+'\{0}\{0}_ExampleProject_SWD.csv'.format(species)
-msg("Locating projection results: {}".format(projectFN))
-if not os.path.exists(projectFN):
-    msg("Projection results not found","error")
-    sys.exit(1)
-    
+   
 #Read in the Maxent results as dataframes
 msg("Importing Maxent results")
 cDF = pd.read_csv(currentFN, dtype={'X':np.long})#,index_col='X')
