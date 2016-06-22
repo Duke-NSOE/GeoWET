@@ -56,4 +56,4 @@ for f in allFiles:
             runCmd = setProjectFN(runCmd,prjFilename)
         msg(runCmd)
         os.system(runCmd)
-        break
+        
