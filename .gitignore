@@ -54,3 +54,4 @@ Scripts/DataPrep/CreateMaxentBatchFile.py
 Scripts/DataPrep/CreateMaxentBatchFile.py
 Data/SDEfiles/arcgis on hydro.arcgis.com (user).ags
 SandBox.tbx
+*.pyc
