@@ -8,4 +8,4 @@ Tooldata/*.gdb
 SpeciesModels/*
 TNCResilience/*
 EEP_030501.gdb/*
-Templates/ExampleProject.*
+Templates/ExampleProject*.*
