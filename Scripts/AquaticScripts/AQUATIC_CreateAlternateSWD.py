@@ -7,6 +7,7 @@
 # WORKFLOW:
 # - Identify the HUC8 and Catchments in which the project occurs
 # - Extract catchment records for the HUC8s in which the project occurs
+# - Write unmodified values to a SWD file
 # - List the area of NLCD types that will be converted in each catchment
 # - List the area of NLCD types within 100m of stream...
 # - List the area of NLCD types in slope categories...
@@ -24,24 +25,27 @@ import pandas as pd
 import numpy as np
 
 arcpy.env.overwriteOutput = True
-#arcpy.env.workspace = r'C:\workspace\GeoWET\scratch'
-#arcpy.env.scratchWorkspace =  r'C:\workspace\GeoWET\scratch'
 arcpy.CheckOutExtension("spatial")
 
 #Inputs
-projectFC = sys.argv[1]#r'C:\workspace\GeoWET\Data\Templates\ExampleProject.shp'
-projectType = sys.argv[2]#'Wetland'
-dataFolder = sys.argv[3]#r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
-outputSWDFile = sys.argv[10]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
+projectFC = sys.argv[1]     #r'C:\workspace\GeoWET\Data\Templates\ExampleProject.shp'
+projectType = sys.argv[2]   #'Wetland'
+dataFolder = sys.argv[3]    #r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
 
 #Static inputs
-fieldMapXLS = sys.argv[4]#r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.xlsx'
-nlcdRaster = sys.argv[5]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
-flowlineFC = sys.argv[6]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
-elevRaster = sys.argv[7]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
-catchmentFC = sys.argv[8]#r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDCatchments'
-flowNet = sys.argv[9]#r'C:\workspace\GeoWET\Data\ToolData\NHD_H_03050102_GDB.gdb\Hydrography\HYDRO_NET'
+fieldMapXLS = sys.argv[4]   #r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.xlsx'
+nlcdRaster = sys.argv[5]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
+flowlineFC = sys.argv[6]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
+elevRaster = sys.argv[7]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
+catchmentFC = sys.argv[8]   #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDCatchments'
+flowNet = sys.argv[9]       #r'C:\workspace\GeoWET\Data\ToolData\NHD_H_03050102_GDB.gdb\Hydrography\HYDRO_NET'
+
+#Derived inputs
 flowNetFC = os.path.join(flowNet,'..',"NHDFlowline")
+
+#Output
+projectSWDFile = sys.argv[10]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
+currentSWDFile = projectSWDFile.replace(".csv","CUR.csv")
 
 ##-----------FUNCTIONS----------
 def msg(txt,severity=""):
@@ -248,6 +252,9 @@ gridCodes.append(gridCode)
 dataDF = makeDataFramefromCSVs(dataFolder,gridCodes)
 msg("{} catchment attributes extracted".format(dataDF.shape[1]))
 
+#Write out unmodified dataframe as current conditions
+dataDF.to_csv(currentSWDFile,index_label="OID",index=False)
+
 ##[5]Adjust NLCD related attributes in the project catchment
 #Read in the StreamCatInfo table
 msg("Reading in field mappings")
@@ -344,4 +351,4 @@ for gridcode in gridCodes:
             dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct      
 
 #Write out data
-dataDF.to_csv(outputSWDFile,index_label="OID",index=False)
+dataDF.to_csv(projectSWDFile,index_label="OID",index=False)
