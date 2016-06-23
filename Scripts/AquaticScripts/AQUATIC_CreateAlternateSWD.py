@@ -255,7 +255,7 @@ msg("{} catchment attributes extracted".format(dataDF.shape[1]))
 #Write out unmodified dataframe as current conditions
 dataDF.to_csv(currentSWDFile,index_label="OID",index=False)
 
-##[5]Adjust NLCD related attributes in the project catchment
+##[5]Adjust NLCD related attributes **in the project catchment**
 #Read in the StreamCatInfo table
 msg("Reading in field mappings")
 lutDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
@@ -304,7 +304,7 @@ for nlcdType, changeValues in dataDict.items():
         #Update the data frame
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct
         
-##[6] Adjust downstream values
+##[6] Adjust **downstream** values
 #Extract only watershed values from the remap table
 wsOnlyDF = lutDF.loc[lutDF.CatWs == 'WS']
 #Loop through each downstream catchment record
@@ -348,7 +348,7 @@ for gridcode in gridCodes:
             #Calculate new percentage
             newPct = newArea / baseArea * 100.0
             #Update the data frame
-            dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct      
+            dataDF.loc[dataDF['GRIDCODE'] == gridcode, nlcdAttrib] = newPct
 
 #Write out data
 dataDF.to_csv(projectSWDFile,index_label="OID",index=False)
