@@ -15,30 +15,29 @@ import numpy as np
 import AQUATIC_utils as aq
 
 #Inputs
-prjSWDFile = r'C:\workspace\GeoWET\Data\Projects\ExampleProject4_SWD.csv'
-ecoregion = "PIEDMONT"
-AqSppXLSX = r'C:\workspace\GeoWET\Data\ToolData\AquaticSpeciesList.xlsx'
-sppModelFolder = r'C:\workspace\GeoWET\Data\SpeciesModels'
-catchmentFC = r'C:\workspace\GeoWET\Data\ToolData\NC_Results.gdb\CatchmentAttributes2'
+prjSWDFile = sys.argv[1]    #r'C:\workspace\GeoWET\Data\Projects\ExampleProject4_SWD.csv'
+ecoregion = sys.argv[2]     #"PIEDMONT"
+AqSppXLSX = sys.argv[3]     #r'C:\workspace\GeoWET\Data\ToolData\AquaticSpeciesList.xlsx'
+sppModelFolder = sys.argv[4]#r'C:\workspace\GeoWET\Data\SpeciesModels'
+catchmentFC = sys.argv[5]   #r'C:\workspace\GeoWET\Data\ToolData\NC_Results.gdb\CatchmentAttributes2'
 
 #Derived inputs
 prjName = os.path.basename(prjSWDFile[:-4])
 prjFolder = os.path.dirname(prjSWDFile)
 curSWDFile = prjSWDFile[:-4] + 'CUR.csv'
+tmpFile = os.path.join(prjFolder,'tmp_{}.csv'.format(prjName))
 
 #Output
 outputCSV = os.path.join(prjFolder,'{}_Uplift.csv'.format(prjName))
-tmpFile = os.path.join(prjFolder,'tmp_{}.csv'.format(prjName))
-outputFC = r'C:\workspace\GeoWET\scratch\scratch.gdb\{}_Uplift'.format(prjName)
+outputFC = sys.argv[6]      #r'C:\workspace\GeoWET\scratch\scratch.gdb\{}_Uplift'.format(prjName)
 
 ##---PROCEDURES---
-#Get the list of species
-sppMultiString = aq.getSpeciesList(AqSppXLSX,"PIEDMONT")
+#Get the list of species for the ecoregion
+sppMultiString = aq.getSpeciesList(AqSppXLSX,ecoregion)
 sppList = sppMultiString.split(";")
 
 #Create a list of species dataframes to merge
 sppDFs = []
-
 #Create a list of uplift field columns, for computing averages
 upliftFlds = []
 
