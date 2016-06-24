@@ -46,11 +46,12 @@ flowNetFC = os.path.join(flowNet,'..',"NHDFlowline")
 #Output
 projectSWDFile = sys.argv[10]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
 currentSWDFile = projectSWDFile.replace(".csv","CUR.csv")
+changeFile = projectSWDFile.replace(".csv","NLCD.csv")
 
 ##-----------FUNCTIONS----------
 def msg(txt,severity=""):
     '''Feedback'''
-    print msg
+    print txt
     #Send to ArcPy, if tool run from ArcMap
     try:
         if severity=="warning":
@@ -253,7 +254,10 @@ dataDF = makeDataFramefromCSVs(dataFolder,gridCodes)
 msg("{} catchment attributes extracted".format(dataDF.shape[1]))
 
 #Write out unmodified dataframe as current conditions
-dataDF.to_csv(currentSWDFile,index_label="OID",index=False)
+curDF = dataDF.copy()
+curDF.to_csv(currentSWDFile,index_label="OID",index=False)
+diffDF = dataDF.copy()  #Difference file; shows changes
+diffCols = ["GRIDCODE"] #Columns to keep in diff file
 
 ##[5]Adjust NLCD related attributes **in the project catchment**
 #Read in the StreamCatInfo table
@@ -303,6 +307,9 @@ for nlcdType, changeValues in dataDict.items():
             msg("   ...%s has decreased %2.2f pct (%s km2)" %(nlcdAttrib,(currentPct - newPct),changeArea))
         #Update the data frame
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct
+        #Update the difference dataframe and add the column to the list
+        diffDF.loc[dataDF['GRIDCODE'] == gridcode, nlcdAttrib] = changeArea
+        diffCols.append(nlcdAttrib)
         
 ##[6] Adjust **downstream** values
 #Extract only watershed values from the remap table
@@ -349,6 +356,15 @@ for gridcode in gridCodes:
             newPct = newArea / baseArea * 100.0
             #Update the data frame
             dataDF.loc[dataDF['GRIDCODE'] == gridcode, nlcdAttrib] = newPct
+            #Update the difference dataframe and add the column to the list
+            diffDF.loc[dataDF['GRIDCODE'] == gridcode, nlcdAttrib] = changeArea
+            diffCols.append(nlcdAttrib)
 
 #Write out data
 dataDF.to_csv(projectSWDFile,index_label="OID",index=False)
+
+#Select only changed columns from diffDF
+for c in diffDF.columns:
+    if not c in diffCols:
+        diffDF.drop(c,axis=1,inplace=True)
+diffDF.to_csv(changeFile,index_label="OID",index=False)
