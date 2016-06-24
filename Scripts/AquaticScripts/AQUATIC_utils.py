@@ -112,12 +112,47 @@ def JoinCSVtoCatchmentFC(csvFilename,catchmentFC,outFC,linkFld="GRIDCODE",verbos
     with arcpy.da.UpdateCursor(outFC,cols) as cursor:
         for row in cursor:
             gridCode = row[0]
-            catchVals = df[df[linkFld] == gridCode].values.tolist()
+            catchVals = df[df[linkFld] == gridCode].values[0].tolist()
             #Update all values
             for i in range(1,len(catchVals)):
-                row[i] = catcVals[i]
+                row[i] = catchVals[i]
             cursor.updateRow(row)
             
     #Return the feature class
     return outFC
     
+def maxentProject(lamdaFile,prjSWDFile,outFile,verbose=False):
+    '''Runs a Maxent projection against the supplied lamdaFile)'''
+    # Check that the maxent.jar file exists in the scripts folder
+    maxentJarFile = os.path.dirname(sys.argv[0])+"\\maxent.jar"
+    if not os.path.exists(maxentJarFile):
+        msg("Maxent.jar file cannot be found in Scripts folder.\nExiting.","error")
+        sys.exit(0)
+    else:
+        if verbose: msg("Maxent.jar found in Scripts folder".format(maxentJarFile))
+    #Check that the other files exist
+    if not os.path.exists(lamdaFile):
+        msg("Lambda file not fount: {}".format(lamdaFile),"error")
+        sys.exit(1)
+    if not os.path.exists(prjSWDFile):
+        msg("Lambda file not fount: {}".format(prjSWDFile),"error")
+        sys.exit(1)
+    # Begin creating the command with boilerplate stuff
+    if verbose: msg("Initializing the Maxent batch command")
+    runString = "java -cp {} density.Project ".format(maxentJarFile)
+    # set lamdas file
+    if verbose: msg("...Setting lambdas file to{}".format(lamdaFile))
+    runString += " {}".format(lamdaFile)
+    # set projection SWD file
+    if verbose: msg("...Setting enviroment layers file to{}".format(prjSWDFile))
+    runString += " {}".format(prjSWDFile)
+    # set output file
+    if verbose: msg("...Setting output file to {}".format(outFile))
+    runString += " {}".format(outFile)
+    # execute the command
+    if verbose: msg("Executing Maxent command")
+    import subprocess
+    subprocess.call(runString,shell=True)
+
+    # return the output file
+    return outFile
