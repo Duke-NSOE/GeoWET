@@ -252,26 +252,26 @@ gridCodes = dsGridCodes
 gridCodes.append(gridCode)
 dataDF = makeDataFramefromCSVs(dataFolder,gridCodes)
 msg("{} catchment attributes extracted".format(dataDF.shape[1]))
-
 #Write out unmodified dataframe as current conditions
 curDF = dataDF.copy()
 curDF.to_csv(currentSWDFile,index_label="OID",index=False)
+#Create dataframe to include NLCD changes, for accounting
 diffDF = dataDF.copy()  #Difference file; shows changes
-diffCols = ["GRIDCODE"] #Columns to keep in diff file
+diffCols = ["GRIDCODE"] #List of columns to keep in diff file; this will grow
 
 ##[5]Adjust NLCD related attributes **in the project catchment**
-#Read in the StreamCatInfo table
+#Read in the StreamCatInfo table listing NLCD<->StreamCat attribute x-reference
 msg("Reading in field mappings")
 lutDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 
-#Process changes record for the catchment itself
+##[5a]Process changes record for the catchment itself
+#Get the dataframe records corresponding to the catchment
 catchDF = dataDF[dataDF.GRIDCODE == gridCode]
-#Get the catchment area values
+#Get the catchment area values from that record and add to a list
 catchArea = catchDF.CatAreaSqKm.values[0]
 riparianArea = catchDF.CatAreaSqKmRp100.values[0]
 midslopeArea = catchDF.PctAg2006Slp10Ws.values[0]
 highslopeArea = catchDF.PctAg2006Slp20Ws.values[0]
-#Put area values into a list
 baseAreas = (catchArea,riparianArea,midslopeArea,highslopeArea)
 
 #Reduce field map dataframe to only catchment (not watershed) records
@@ -279,8 +279,7 @@ catOnlyDF = lutDF.loc[lutDF.CatWs == 'CAT']
 
 #Loop through the land cover types that have changed for the current catchment
 for nlcdType, changeValues in dataDict.items():
-    ##Process catchment wide values
-    #Extract fields mapped to the current land cover type
+    #Extract fields mapped to the current land cover type (e.g. '11'<->'OpenWater'
     nlcdDF = catOnlyDF.loc[(catOnlyDF.NLCDMap==nlcdType)]
     #Loop through retrieved attributes 
     for nlcdAttrib in nlcdDF.Attribute.values:
@@ -289,11 +288,11 @@ for nlcdType, changeValues in dataDict.items():
         elif "Slp10" in nlcdAttrib: idx = 2   # Mid-slope
         elif "Slp20" in nlcdAttrib: idx = 3   # High-slope
         else: idx = 0                         # Catchment wide
-        #Get the appropriate change area
+        #Get the appropriate change area from the dictionary
         changeArea = changeValues[idx]
         #Skip if no change has occurred
-        if changeArea == 0: continue
-        #Get the appropriate baseline area
+        #if changeArea == 0: continue
+        #Get the appropriate baseline area from the areas list created above
         baseArea = baseAreas[idx]
         #Get the value of that attribute in the catchment dataframe
         currentPct = catchDF[nlcdAttrib].values[0]
@@ -308,15 +307,15 @@ for nlcdType, changeValues in dataDict.items():
         #Update the data frame
         dataDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = newPct
         #Update the difference dataframe and add the column to the list
-        diffDF.loc[dataDF['GRIDCODE'] == gridcode, nlcdAttrib] = changeArea
+        diffDF.loc[dataDF['GRIDCODE'] == gridCode, nlcdAttrib] = changeArea
         diffCols.append(nlcdAttrib)
         
-##[6] Adjust **downstream** values
+##[5b] Adjust **downstream** values
 #Extract only watershed values from the remap table
 wsOnlyDF = lutDF.loc[lutDF.CatWs == 'WS']
 #Loop through each downstream catchment record
 for gridcode in gridCodes:
-    msg("Processing catchment# {}".format(gridcode))
+    #msg("Processing catchment# {}".format(gridcode))
     #Retrieve the record for the current gridCode
     catchDF = dataDF[dataDF.GRIDCODE == gridcode]
 
@@ -343,7 +342,7 @@ for gridcode in gridCodes:
             #Get the appropriate change area
             changeArea = changeValues[idx]
             #Skip if no change has occurred
-            if changeArea == 0: continue
+            #if changeArea == 0: continue
             #Get the appropriate baseline area
             baseArea = baseAreas[idx]
             #Get the value of that attribute in the catchment dataframe
@@ -361,10 +360,14 @@ for gridcode in gridCodes:
             diffCols.append(nlcdAttrib)
 
 #Write out data
+msg("Writing data to: {}".format(projectSWDFile))
 dataDF.to_csv(projectSWDFile,index_label="OID",index=False)
 
 #Select only changed columns from diffDF
+msg("Writing change file to: {}".format(changeFile))
 for c in diffDF.columns:
     if not c in diffCols:
         diffDF.drop(c,axis=1,inplace=True)
+    elif c <> "GRIDCODE":
+        diffDF[c] = curDF[c] - dataDF[c]
 diffDF.to_csv(changeFile,index_label="OID",index=False)
