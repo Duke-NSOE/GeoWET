@@ -33,7 +33,7 @@ projectType = sys.argv[2]   #'Wetland'
 dataFolder = sys.argv[3]    #r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
 
 #Static inputs
-fieldMapXLS = sys.argv[4]   #r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.xlsx'
+fieldMapCSV = sys.argv[4]   #r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.csv'
 nlcdRaster = sys.argv[5]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
 flowlineFC = sys.argv[6]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
 elevRaster = sys.argv[7]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
@@ -262,7 +262,7 @@ diffCols = ["GRIDCODE"] #List of columns to keep in diff file; this will grow
 ##[5]Adjust NLCD related attributes **in the project catchment**
 #Read in the StreamCatInfo table listing NLCD<->StreamCat attribute x-reference
 msg("Reading in field mappings")
-lutDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
+lutDF = pd.read_csv(fieldMapCSV,'StreamCatInfo')
 
 ##[5a]Process changes record for the catchment itself
 #Get the dataframe records corresponding to the catchment
