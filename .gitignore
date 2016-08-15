@@ -1,58 +1,15 @@
+Data/NC_Results.gdb
+
 Scratch/Rstuff/*.csv
 
-# Windows image file caches
-Thumbs.db
-ehthumbs.db
-
-# Folder config file
-Desktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# Windows Installer files
-*.cab
-*.msi
-*.msm
-*.msp
-
-# Windows shortcuts
-*.lnk
-
-# =========================
-# Operating System Files
-# =========================
-
-# OSX
-# =========================
-
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
 Scripts/DataPrep/utils.py
 Scripts/DataPrep/UpliftToASCII.py
 Scripts/DataPrep/DataPrep_ExtractESRILandscapeData.py
 Scripts/DataPrep/CreateMaxentBatchFile.py
 Scripts/DataPrep/CreateMaxentBatchFile.py
 Data/SDEfiles/arcgis on hydro.arcgis.com (user).ags
+
 SandBox.tbx
 *.pyc
+
 Data/SpeciesModels.7z
