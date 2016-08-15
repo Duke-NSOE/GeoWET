@@ -1,6 +1,14 @@
 #MergeStreamCatCSVFiles.py
 #
-# Description: Merges regional stream cat data files into a single file
+# Description: Merges regional stream cat data files into a single file. The regional
+#  files need to be downloaded to the StreamCat/Regional/XX folders, where XX is the
+#  region name (.e.g., "03N").
+#
+#  ALSO, the HUC12Lookup.csv file must reside in the Data/Tooldata folder. The HUC12Lookup
+#  file is used to attach HUC lookup values to each combined table.
+#
+#  This script must be run AFTER having downloaded all the stream cat data and BEFORE
+#  any scripts creating a project. 
 #
 # June 2016
 # John.Fay@duke.edu
@@ -9,16 +17,18 @@ import sys, os, pandas
 import numpy as np
 
 #Workspaces
-rootFldr = r'C:\workspace\GeoWET\Data\StreamCat\Regional'
-rgn03N = os.path.join(rootFldr,"Region03N")
-rgn05 =  os.path.join(rootFldr,"Region05")
-rgn05 =  os.path.join(rootFldr,"Region06")
+rootFldr = os.path.dirname(os.path.dirname(os.path.dirname(sys.argv[0])))
+baseFldr = os.path.join(rootFldr,"Data","StreamCat")
+regionFldr = os.path.join(baseFldr,"Regions")
+rgn03N = os.path.join(regionFldr,"03N")
+rgn05 =  os.path.join(regionFldr,"05")
+rgn05 =  os.path.join(regionFldr,"06")
 
 #Get list of files
 csvFiles = os.listdir(rgn03N)
 
 #Get the catchment lookup table (to add HUC12, GRIDCODE columns)
-nhdTableFN = r'C:\workspace\GeoWET\Data\Tooldata\HUC12Lookup.csv'
+nhdTableFN = os.path.join(rootFldr,"Data","Tooldata","HUC12Lookup.csv")
 
 #Create a dataframe from the HUC12 Lookup
 cols = ("GRIDCODE","FEATUREID","REACHCODE","HUC_12")
@@ -30,11 +40,14 @@ for csvFile in csvFiles:
     if csvFile[-3:] <> "csv": continue
     print "Merging {}".format(csvFile.replace("03N",""))
 
-    #Data Files
+    #Data Files to be read
     file03n = os.path.join(rgn03N,csvFile)
     file05 = file03n.replace("03N","05")
     file06 = file03n.replace("03N","06")
-    outFN = os.path.join(rootFldr,csvFile.replace("03N",""))
+
+    #Output file -- in StreamCat folder
+    outFN = os.path.join(baseFldr,csvFile.replace("03N",""))
+    if os.path.exists(outFN): continue
 
     #Data frames
     df03n = pandas.read_csv(file03n,dtype={"COMID":np.str})
