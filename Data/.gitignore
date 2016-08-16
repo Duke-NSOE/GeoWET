@@ -1,6 +1,7 @@
 Chapin/*
 EEP/*
-StreamCat/*
+StreamCat/AllRegions/*
+StreamCat/Regions/*
 Tooldata/NHDStreamCat.gdb/*
 Tooldata/NHDStreamCat.gdb/*
 Tooldata/NCStreamCat.gdb/*
