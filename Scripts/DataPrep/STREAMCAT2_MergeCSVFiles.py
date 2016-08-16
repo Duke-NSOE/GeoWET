@@ -46,7 +46,7 @@ for csvFile in csvFiles:
     file06 = file03n.replace("03N","06")
 
     #Output file -- in StreamCat folder
-    outFN = os.path.join(baseFldr,csvFile.replace("03N",""))
+    outFN = os.path.join(baseFldr,"AllRegions",csvFile.replace("03N",""))
     if os.path.exists(outFN): continue
 
     #Data frames
