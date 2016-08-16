@@ -26,6 +26,8 @@ import numpy as np
 
 arcpy.env.overwriteOutput = True
 arcpy.CheckOutExtension("spatial")
+if not arcpy.env.scratchWorkspace:
+    arcpy.env.scratchWorkspace = os.path.dirname(sys.argv[0])
 
 #Inputs
 projectFC = sys.argv[1]     #r'C:\workspace\GeoWET\Data\Templates\ExampleProject.shp'
@@ -33,7 +35,7 @@ projectType = sys.argv[2]   #'Wetland'
 dataFolder = sys.argv[3]    #r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
 
 #Static inputs
-fieldMapCSV = sys.argv[4]   #r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.csv'
+fieldMapXLS = sys.argv[4]   #r'C:\workspace\GeoWET\Data\StreamCat\StreamCatInfo.csv'
 nlcdRaster = sys.argv[5]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\nlcd_2011'
 flowlineFC = sys.argv[6]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDFlowlines'
 elevRaster = sys.argv[7]    #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\elev_cm'
@@ -41,7 +43,7 @@ catchmentFC = sys.argv[8]   #r'C:\workspace\GeoWET\Data\EEP_030501.gdb\NHDCatchm
 flowNet = sys.argv[9]       #r'C:\workspace\GeoWET\Data\ToolData\NHD_H_03050102_GDB.gdb\Hydrography\HYDRO_NET'
 
 #Derived inputs
-flowNetFC = os.path.join(flowNet,'..',"NHDFlowline")
+flowNetFC = os.path.join(os.path.dirname(flowNet),"NHDFlowlines")
 
 #Output
 projectSWDFile = sys.argv[10]#r'C:\workspace\GeoWET\Scratch\ExampleProject_SWD.csv'
@@ -84,12 +86,12 @@ def getDownstreamGridCodes(gridcode,catchFC,flownet,flownetFC):
     #Get the catchment corresponding to the gridcode
     theCatchLyr = arcpy.MakeFeatureLayer_management(catchFC,"theCatch","GRIDCODE = {}".format(gridcode))
     #Clip the flowine within the catchment and get its lowest point
-    theFlowline = arcpy.Clip_analysis(flownetFC,theCatchLyr,"in_memory/theFlowline")
+    theFlowline = arcpy.Clip_analysis(flowlineFC,theCatchLyr,"in_memory/theFlowline")
     theFlowpoint = arcpy.FeatureVerticesToPoints_management(theFlowline,"in_memory/thePoint","END")
     #Trace from this point downstream to the end of the HUC8 geometric network
     theTraceLyr = arcpy.TraceGeometricNetwork_management(flownet,"DownStrmLyr",theFlowpoint,"TRACE_DOWNSTREAM")
     #Extract the line feature
-    theTraceLine = arcpy.SelectData_management(theTraceLyr,"NHDFlowline")
+    theTraceLine = arcpy.SelectData_management(theTraceLyr,os.path.basename(flownetFC))
     #Make a new feature layer of catchments and select those that intersect the downstream trace
     theCatchLyr = arcpy.MakeFeatureLayer_management(catchFC,"theCatch")
     theCatchments = arcpy.SelectLayerByLocation_management(theCatchLyr,"INTERSECT",theTraceLine)
@@ -262,7 +264,7 @@ diffCols = ["GRIDCODE"] #List of columns to keep in diff file; this will grow
 ##[5]Adjust NLCD related attributes **in the project catchment**
 #Read in the StreamCatInfo table listing NLCD<->StreamCat attribute x-reference
 msg("Reading in field mappings")
-lutDF = pd.read_csv(fieldMapCSV,'StreamCatInfo')
+lutDF = pd.read_excel(fieldMapXLS,'StreamCatInfo')
 
 ##[5a]Process changes record for the catchment itself
 #Get the dataframe records corresponding to the catchment
