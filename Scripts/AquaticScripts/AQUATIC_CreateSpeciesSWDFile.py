@@ -183,6 +183,11 @@ def removeXCorrelated(theDF, corrDict, log, threshold=0.75):
     return theDF
 
 ##------Procedures--------
+#Check that the species SWD has not been created already
+if os.path.exists(outFN):
+    msg("{} SWD file has already been created!".format(sppName))
+    sys.exit()
+
 #Make sure the species name is valid
 checkSpeciesName(sppName,eoCSV)
 
