@@ -145,6 +145,8 @@ for catItem in ("StreamOrde","FCODE"):
 if prjFile <> "#":
     msg("Setting projection file to {}".format(prjFile))
     runString += " projectionlayers={}".format(prjFile)
+else:
+    runString += " projectionlayers="
 
 # Write commands to batch file
 msg("Writing commands to batchfile {}".format(maxentFile))
