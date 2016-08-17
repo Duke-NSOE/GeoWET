@@ -35,6 +35,7 @@ outStr = outStr
 
 #Set the output, if called from ArcMap
 try:
+    arcpy.AddMessage("Saving table")
     arcpy.SetParameterAsText(2,outStr)
 except:
     pass
