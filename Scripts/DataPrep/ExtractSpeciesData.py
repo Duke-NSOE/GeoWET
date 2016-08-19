@@ -29,9 +29,13 @@ import numpy as np
 spp = "Nocomis_leptocephalus"
 
 #Workspaces
-eoCSV = r'C:\workspace\GeoWET\Data\ToolData\SpeciesOccurrences.csv'
-dataFldr = r'C:\workspace\GeoWET\Data\StreamCat\AllRegions'
-outFN = r'C:\workspace\GeoWET\Data\SpeciesModels\{}.csv'.format(spp)
+rootDir = os.path.dirname(os.path.dirname(os.path.dirname(sys.argv[0])))
+dataDir = os.path.join(rootDir,"Data")
+eoCSV = os.path.join(dataDir,'ToolData','SpeciesOccurrences.csv')
+dataFldr = os.path.join(dataDir,'StreamCat')
+sppFldr = os.path.join(dataDir,'SpeciesModels')
+if not os.path.exists(sppFldr): os.mkdir(sppFldr)
+outFN = os.path.join(sppFldr,'{}.csv'.format(spp))
 
 ##--------Functions--------##
 def checkSpeciesName(speciesName,eoCSV):
@@ -104,6 +108,7 @@ print "{} was found in {} HUC8s".format(spp, len(huc8s))
 ##Loop through StreamCat tables and create a dataframe of just the records
 ##in the HUC8s where the species was found...
 allFiles = os.listdir(dataFldr)     # List if all files in the StreamCat folder
+allFiles.remove("StreamCatInfo.csv")#  remove the StreamCatInfo.csv 
 dataFrames = []                     # Initialize the list of dataFrames
 firstFile = True                    # Initialize variable to see if it's the first variable
 
