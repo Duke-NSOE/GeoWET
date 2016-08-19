@@ -2,12 +2,13 @@
 #
 #Locates and runs all batch files in sequence.
 #
+# NOTEs:
 # This script requires 64-bit Java installed on the machine.
 #  Download at: https://java.com/en/download/manual.jsp
-#  and then 
-#
-# NOTE: to allocate space for java to run, see:
-#   http://stackoverflow.com/questions/18040361/java-could-not-reserve-enough-space-for-object-heap-error
+# To allocate space for java to run, see:
+#  http://stackoverflow.com/questions/18040361/java-could-not-reserve-enough-space-for-object-heap-error
+# To fix Error Code 5, see:
+#  http://stackoverflow.com/questions/16428098/groovy-shell-warning-could-not-open-create-prefs-root-node
 #
 # June 2016
 # John.Fay@duke.edu
@@ -75,6 +76,6 @@ for f in allFiles:
         #Change the project filename
         if prjFilename not in ("#",""):
             runCmd = setProjectFN(runCmd,prjFilename)
-        msg(runCmd)
+        #msg(runCmd)
         os.system(runCmd)
         
